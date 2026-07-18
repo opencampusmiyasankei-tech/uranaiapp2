@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#FF6FA5" />
+<title>たべもの占い 🍀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+/* ===== カラーパレット（駄菓子屋ポップ） ===== */
+:root{
+  --cream:#FFF6D8;   /* クリームソーダ */
+  --pink:#FF6FA5;    /* いちごミルク */
+  --orange:#FFA94D;  /* みかん */
+  --teal:#3BC9DB;    /* ソーダ */
+  --purple:#9775FA;  /* ぶどう */
+  --green:#69DB7C;   /* メロン */
+  --yellow:#FFD43B;  /* プリン */
+  --ink:#4B3F4E;     /* あんこ（文字色） */
+  --shadow:rgba(75,63,78,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+  color:var(--ink);
+  background:linear-gradient(165deg,#FFF6D8 0%,#FFE3F0 48%,#D9F6F2 100%);
+  min-height:100vh;
+  display:flex;justify-content:center;align-items:flex-start;
+  padding:28px 16px 60px;
+  overflow-x:hidden;
+}
+button{font-family:inherit;cursor:pointer;}
+button:focus-visible,input:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}
+
+/* ===== 背景にただよう食べもの絵文字 ===== */
+.float-emoji{
+  position:fixed;z-index:0;opacity:.45;user-select:none;pointer-events:none;
+  animation:floaty var(--dur,8s) ease-in-out infinite alternate;
+}
+@keyframes floaty{
+  from{transform:translateY(0) rotate(-8deg);}
+  to{transform:translateY(-18px) rotate(8deg);}
+}
+
+/* ===== カード（ステッカー風） ===== */
+.card{
+  position:relative;z-index:1;
+  width:100%;max-width:430px;
+  background:#fff;
+  border:3px solid var(--ink);
+  border-radius:26px;
+  box-shadow:8px 8px 0 var(--shadow);
+  padding:26px 22px 22px;
+  animation:cardIn .45s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes cardIn{from{transform:translateY(16px) scale(.97);opacity:0;}to{transform:none;opacity:1;}}
+.hidden{display:none;}
+
+/* ===== タイトルまわり ===== */
+.badge{
+  display:inline-block;
+  background:var(--yellow);
+  border:2.5px solid var(--ink);border-radius:999px;
+  padding:4px 14px;font-size:12px;font-weight:900;
+  box-shadow:3px 3px 0 var(--shadow);
+  margin-bottom:12px;
+}
+.title{
+  font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;
+  font-size:40px;line-height:1.15;letter-spacing:.02em;
+  background:linear-gradient(120deg,var(--pink),var(--orange) 55%,var(--teal));
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;
+  margin-bottom:6px;
+}
+.title .spin{display:inline-block;animation:spinSlow 5s linear infinite;}
+@keyframes spinSlow{to{transform:rotate(360deg);}}
+.subtitle{font-size:13.5px;font-weight:700;color:#8a7a8e;margin-bottom:20px;}
+
+/* ===== 入力まわり ===== */
+.label{font-size:14px;font-weight:900;margin:16px 0 8px;display:block;}
+.name-input{
+  width:100%;font-size:16px;font-weight:700;color:var(--ink);
+  border:2.5px solid var(--ink);border-radius:14px;
+  padding:12px 14px;background:#FFFDF6;
+  box-shadow:3px 3px 0 var(--shadow);
+  transition:border-color .15s, box-shadow .15s;
+}
+.name-input::placeholder{color:#c2b5c5;font-weight:500;}
+.name-input:focus{border-color:var(--pink);box-shadow:3px 3px 0 rgba(255,111,165,.35);}
+
+.food-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:9px;
+}
+.food-btn{
+  background:#FFFDF6;border:2.5px solid var(--ink);border-radius:16px;
+  box-shadow:3px 3px 0 var(--shadow);
+  padding:10px 4px 8px;text-align:center;
+  transition:transform .12s, background .12s, border-color .12s, box-shadow .12s;
+}
+.food-btn .emoji{font-size:29px;display:block;line-height:1.2;}
+.food-btn .name{font-size:11.5px;font-weight:900;color:var(--ink);}
+.food-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow);}
+.food-btn.selected{
+  background:#FFE9F2;border-color:var(--pink);
+  box-shadow:3px 3px 0 rgba(255,111,165,.45);
+  animation:pop .28s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes pop{0%{transform:scale(.85);}60%{transform:scale(1.08);}100%{transform:scale(1);}}
+
+.error{
+  display:none;margin-top:7px;
+  font-size:12.5px;font-weight:900;color:#E8467C;
+}
+.error.show{display:block;}
+.shake{animation:shake .4s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px);}40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}80%{transform:translateX(4px);}
+}
+
+/* ===== うらなうボタン ===== */
+.go-btn{
+  width:100%;margin-top:22px;
+  font-family:"Mochiy Pop One","Zen Maru Gothic",sans-serif;
+  font-size:21px;color:#fff;letter-spacing:.05em;
+  background:linear-gradient(120deg,var(--pink),var(--orange));
+  border:3px solid var(--ink);border-radius:999px;
+  padding:14px 10px;
+  box-shadow:5px 5px 0 var(--shadow);
+  text-shadow:1px 2px 0 rgba(75,63,78,.25);
+  animation:wiggle 2.8s ease-in-out infinite;
+  transition:transform .12s, box-shadow .12s;
+}
+.go-btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow);animation:none;}
+.go-btn.again{background:linear-gradient(120deg,var(--teal),var(--purple));animation:none;margin-top:20px;}
+@keyframes wiggle{
+  0%,86%,100%{transform:rotate(0);}
+  90%{transform:rotate(-1.6deg) scale(1.02);}
+  94%{transform:rotate(1.6deg) scale(1.02);}
+}
+
+.credit{
+  margin-top:16px;text-align:center;
+  font-size:11.5px;font-weight:700;color:#a394a7;
+}
+.credit small{display:block;margin-top:2px;font-size:10.5px;font-weight:500;}
+
+/* ===== うらない中の画面 ===== */
+#loadingCard{text-align:center;padding:52px 22px;}
+.loading-emoji{font-size:64px;animation:bounce .7s ease-in-out infinite alternate;}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-16px);}}
+.loading-text{
+  margin-top:18px;font-family:"Mochiy Pop One",sans-serif;
+  font-size:19px;color:var(--pink);
+}
+.dots span{animation:blink 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,100%{opacity:.2;}50%{opacity:1;}}
+
+/* ===== 結果画面 ===== */
+#resultCard{text-align:center;}
+.result-date{font-size:12px;font-weight:700;color:#a394a7;}
+.result-name{
+  font-family:"Mochiy Pop One",sans-serif;
+  font-size:19px;margin:4px 0 18px;
+}
+.stamp{
+  display:inline-block;
+  font-family:"Mochiy Pop One",sans-serif;
+  font-size:46px;line-height:1;
+  padding:20px 30px;
+  border:5px solid currentColor;border-radius:20px;
+  background:#fff;
+  transform:rotate(-6deg);
+  box-shadow:5px 5px 0 var(--shadow);
+  animation:stampIn .55s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes stampIn{
+  0%{transform:scale(2.6) rotate(-22deg);opacity:0;}
+  55%{transform:scale(.92) rotate(-6deg);opacity:1;}
+  75%{transform:scale(1.06) rotate(-6deg);}
+  100%{transform:scale(1) rotate(-6deg);}
+}
+.stars{font-size:21px;margin:14px 0 8px;letter-spacing:2px;}
+.fortune-msg{font-size:14.5px;font-weight:700;line-height:1.75;}
+.food-comment{
+  margin:16px 0 6px;padding:11px 14px;
+  background:var(--cream);
+  border:2.5px dashed var(--orange);border-radius:14px;
+  font-size:13px;font-weight:700;line-height:1.7;text-align:left;
+}
+
+.lucky-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.lucky-box{
+  border:2.5px solid var(--ink);border-radius:16px;
+  background:#FFFDF6;box-shadow:3px 3px 0 var(--shadow);
+  padding:12px 8px;
+}
+.lucky-label{font-size:11.5px;font-weight:900;color:#8a7a8e;margin-bottom:5px;}
+.lucky-value{font-size:14px;font-weight:900;line-height:1.5;}
+.color-dot{
+  display:inline-block;width:14px;height:14px;border-radius:50%;
+  border:2px solid var(--ink);vertical-align:-2px;margin-right:5px;
+}
+
+/* ===== 運勢グラフ ===== */
+.graph{margin-top:20px;text-align:left;}
+.graph-title{
+  font-family:"Mochiy Pop One",sans-serif;
+  font-size:15px;text-align:center;margin-bottom:12px;
+}
+.bar-row{margin-bottom:11px;}
+.bar-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;font-weight:900;margin-bottom:4px;
+}
+.bar-val{font-family:"Mochiy Pop One",sans-serif;font-size:15px;}
+.bar-track{
+  height:16px;background:#F1EAF2;
+  border:2px solid var(--ink);border-radius:999px;overflow:hidden;
+}
+.bar-fill{
+  height:100%;width:0;border-radius:999px;
+  transition:width .9s cubic-bezier(.22,1,.36,1);
+}
+
+/* ===== 紙吹雪 ===== */
+.confetti{
+  position:fixed;top:-8vh;z-index:50;pointer-events:none;user-select:none;
+  animation:fall linear forwards;
+}
+@keyframes fall{
+  to{transform:translateY(120vh) rotate(720deg);opacity:.7;}
+}
+
+/* ===== モーション軽減設定に対応 ===== */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ①スタート画面 -->
+<main class="card" id="startCard">
+  <span class="badge">🔮 診断・占いアプリ</span>
+  <h1 class="title">たべもの占い<span class="spin">🍀</span></h1>
+  <p class="subtitle">すきな食べ物をえらぶと、今日の運勢がわかっちゃう！？</p>
+
+  <label class="label" for="nameInput">🙋 なまえ（ニックネームOK）</label>
+  <input id="nameInput" class="name-input" type="text" maxlength="12" placeholder="例：たろう" autocomplete="off" />
+  <p class="error" id="nameError">⚠️ なまえを入れてね！</p>
+
+  <span class="label">🍴 すきな食べ物をえらんでね</span>
+  <div class="food-grid" id="foodGrid"></div>
+  <p class="error" id="foodError">⚠️ 食べ物をえらんでね！</p>
+
+  <button class="go-btn" id="goBtn">🔮 うらなう！</button>
+
+  <p class="credit">✨ アプリのアイデア：たろうさん ✨<small>🤖 このアプリは生成AIといっしょに作りました</small></p>
+</main>
+
+<!-- ②うらない中の画面 -->
+<main class="card hidden" id="loadingCard">
+  <div class="loading-emoji" id="loadingEmoji">🔮</div>
+  <p class="loading-text">うらなっているよ<span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+</main>
+
+<!-- ③結果画面 -->
+<main class="card hidden" id="resultCard">
+  <p class="result-date" id="resultDate"></p>
+  <h2 class="result-name" id="resultName"></h2>
+
+  <div class="stamp" id="stamp"><span id="stampText"></span></div>
+  <div class="stars" id="stars"></div>
+  <p class="fortune-msg" id="fortuneMsg"></p>
+
+  <div class="food-comment" id="foodComment"></div>
+
+  <div class="lucky-row">
+    <div class="lucky-box">
+      <p class="lucky-label">🎁 ラッキーアイテム</p>
+      <p class="lucky-value" id="luckyItem"></p>
+    </div>
+    <div class="lucky-box">
+      <p class="lucky-label">🎨 ラッキーカラー</p>
+      <p class="lucky-value"><span class="color-dot" id="colorDot"></span><span id="luckyColor"></span></p>
+    </div>
+  </div>
+
+  <div class="graph">
+    <p class="graph-title">📊 きょうの運勢グラフ</p>
+    <div id="bars"></div>
+  </div>
+
+  <button class="go-btn again" id="againBtn">🔁 もういちど うらなう</button>
+
+  <p class="credit">✨ アプリのアイデア：たろうさん ✨<small>🤖 このアプリは生成AIといっしょに作りました</small></p>
+</main>
+
+<script>
+"use strict";
+
+/* ===== データ ===== */
+
+// 食べ物メニュー（えらぶと性格コメントも出るよ）
+const FOODS = [
+  { emoji:"🍣", name:"おすし",     comment:"お寿司をえらぶキミは、キラリと光るセンスの持ち主！" },
+  { emoji:"🍜", name:"ラーメン",   comment:"ラーメン好きのキミは、あついハートのがんばり屋！" },
+  { emoji:"🍕", name:"ピザ",       comment:"ピザをえらぶキミは、みんなを笑顔にするムードメーカー！" },
+  { emoji:"🍛", name:"カレー",     comment:"カレー好きのキミは、スパイスのきいたアイデアの天才！" },
+  { emoji:"🍰", name:"ケーキ",     comment:"ケーキをえらぶキミは、やさしさたっぷりの癒やし系！" },
+  { emoji:"🍦", name:"アイス",     comment:"アイス好きのキミは、クールに見えて実はあまえんぼ…？" },
+  { emoji:"🍙", name:"おにぎり",   comment:"おにぎり好きのキミは、みんなに愛される安心感のかたまり！" },
+  { emoji:"🍓", name:"いちご",     comment:"いちごをえらぶキミは、フレッシュな感性のもちぬし！" },
+  { emoji:"🍫", name:"チョコ",     comment:"チョコ好きのキミは、あまさもビターも知っている大人！" },
+  { emoji:"🍔", name:"バーガー",   comment:"バーガー好きのキミは、パワフルなチャレンジャー！" },
+  { emoji:"🍤", name:"エビフライ", comment:"エビフライ好きのキミは、サクサク動ける行動派！" },
+  { emoji:"🥞", name:"パンケーキ", comment:"パンケーキ好きのキミは、ふんわりやさしい心のもちぬし！" },
+];
+
+// 運勢レベル（weight = 出やすさ、bonus = グラフへのボーナス）
+const LEVELS = [
+  { name:"超大吉", weight:8,  bonus:14, color:"#E8467C", stars:"🌈✨⭐⭐⭐⭐⭐✨🌈",
+    msgs:["今日は最強デー！何をやってもうまくいく予感✨","奇跡レベルのラッキーが待っているかも！？🎉"] },
+  { name:"大吉",   weight:22, bonus:10, color:"#F76707", stars:"⭐⭐⭐⭐⭐",
+    msgs:["運気グングン上昇中！新しいことに挑戦しよう🚀","うれしいサプライズがありそうな一日！🎁"] },
+  { name:"中吉",   weight:26, bonus:7,  color:"#F59F00", stars:"⭐⭐⭐⭐",
+    msgs:["いい感じの一日！笑顔でいるとさらに運気アップ😊","コツコツがんばると良いことがあるよ！💪"] },
+  { name:"小吉",   weight:18, bonus:4,  color:"#37B24D", stars:"⭐⭐⭐",
+    msgs:["ゆっくりペースで吉◎ あわてず自分らしくいこう🌿","小さなハッピーを見つけられる日！🔍"] },
+  { name:"吉",     weight:16, bonus:2,  color:"#1C7ED6", stars:"⭐⭐",
+    msgs:["おだやかな運気。すきなものを食べて元気チャージ🍴","友だちとおしゃべりするとラッキーが近づくよ！💬"] },
+  { name:"末吉",   weight:10, bonus:0,  color:"#7048E8", stars:"⭐🌱",
+    msgs:["これから運気が育つ日🌱 ラッキーアイテムがキミを守る！","夜にかけて運気アップ！あきらめないでいこう◎🌙"] },
+];
+
+const LUCKY_ITEMS = [
+  "赤いえんぴつ","四つ葉のクローバー","星のシール","ふわふわのタオル",
+  "青いペン","まるいクッキー","イヤホン","しましまのくつ下",
+  "キラキラのキーホルダー","黄色いハンカチ","ねこの写真","小さな手鏡",
+  "ガチャガチャのカプセル","いいにおいのハンドクリーム","推しのグッズ","お気に入りの消しゴム",
+];
+
+const LUCKY_COLORS = [
+  { name:"いちごピンク",   css:"#FF6FA5" },
+  { name:"スカイブルー",   css:"#4FC3F7" },
+  { name:"レモンイエロー", css:"#FFD43B" },
+  { name:"ミントグリーン", css:"#63E6BE" },
+  { name:"ラベンダー",     css:"#B197FC" },
+  { name:"みかんオレンジ", css:"#FFA94D" },
+  { name:"チェリーレッド", css:"#FF6B6B" },
+  { name:"ソーダブルー",   css:"#66D9E8" },
+  { name:"ピーチ",         css:"#FFC9C9" },
+  { name:"ミルクホワイト", css:"#FFF9F0" },
+];
+
+// 運勢グラフの項目
+const CATEGORIES = [
+  { emoji:"💖", name:"恋愛運",   color:"linear-gradient(90deg,#FF8FB8,#FF6FA5)" },
+  { emoji:"💰", name:"金運",     color:"linear-gradient(90deg,#FFE066,#FCC419)" },
+  { emoji:"📚", name:"勉強運",   color:"linear-gradient(90deg,#74C0FC,#4DABF7)" },
+  { emoji:"💪", name:"健康運",   color:"linear-gradient(90deg,#8CE99A,#51CF66)" },
+  { emoji:"🎮", name:"あそび運", color:"linear-gradient(90deg,#B197FC,#9775FA)" },
+];
+
+/* ===== おなじ日・おなじ入力なら、おなじ結果が出るしくみ =====
+   「なまえ × 食べ物 × 日付」から数字のタネ（シード）を作って、
+   そのタネで乱数を出すので、ほんものの占いっぽく1日固定！ */
+function makeSeed(str){
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++){
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  h = Math.imul(h ^ (h >>> 16), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^= h >>> 16) >>> 0;
+}
+function makeRng(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function weightedPick(rng, items){
+  const total = items.reduce((s, it) => s + it.weight, 0);
+  let r = rng() * total;
+  for (const it of items){
+    r -= it.weight;
+    if (r < 0) return it;
+  }
+  return items[items.length - 1];
+}
+const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+
+/* ===== 画面の部品 ===== */
+const $ = (id) => document.getElementById(id);
+const startCard = $("startCard"), loadingCard = $("loadingCard"), resultCard = $("resultCard");
+let selectedFood = null;
+
+// 食べ物ボタンをならべる
+const foodGrid = $("foodGrid");
+FOODS.forEach((f, i) => {
+  const btn = document.createElement("button");
+  btn.className = "food-btn";
+  btn.type = "button";
+  btn.innerHTML = `<span class="emoji">${f.emoji}</span><span class="name">${f.name}</span>`;
+  btn.addEventListener("click", () => {
+    selectedFood = i;
+    document.querySelectorAll(".food-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    $("foodError").classList.remove("show");
+  });
+  foodGrid.appendChild(btn);
+});
+
+// 背景にただよう絵文字をばらまく
+const BG_EMOJIS = ["🍣","🍜","🍕","🍰","🍓","🍙","🍫","🥞","🍀","⭐"];
+BG_EMOJIS.forEach((e, i) => {
+  const s = document.createElement("span");
+  s.className = "float-emoji";
+  s.textContent = e;
+  s.style.left = (5 + Math.random() * 88) + "vw";
+  s.style.top = (4 + Math.random() * 88) + "vh";
+  s.style.fontSize = (20 + Math.random() * 16) + "px";
+  s.style.setProperty("--dur", (6 + Math.random() * 5) + "s");
+  s.style.animationDelay = (-Math.random() * 6) + "s";
+  document.body.appendChild(s);
+});
+
+/* ===== うらなう！ ===== */
+function divine(){
+  const name = $("nameInput").value.trim();
+
+  // 入力チェック
+  let ok = true;
+  if (!name){
+    $("nameError").classList.add("show");
+    $("nameInput").classList.add("shake");
+    setTimeout(() => $("nameInput").classList.remove("shake"), 450);
+    ok = false;
+  }
+  if (selectedFood === null){
+    $("foodError").classList.add("show");
+    foodGrid.classList.add("shake");
+    setTimeout(() => foodGrid.classList.remove("shake"), 450);
+    ok = false;
+  }
+  if (!ok) return;
+  $("nameError").classList.remove("show");
+
+  const food = FOODS[selectedFood];
+
+  // シード作成 → 乱数準備
+  const d = new Date();
+  const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const rng = makeRng(makeSeed(`${name}|${food.name}|${dateKey}`));
+
+  // 結果を決める
+  const level  = weightedPick(rng, LEVELS);
+  const msg    = pick(rng, level.msgs);
+  const item   = pick(rng, LUCKY_ITEMS);
+  const color  = pick(rng, LUCKY_COLORS);
+  const stats  = CATEGORIES.map(() => Math.min(100, Math.floor(35 + rng() * 52 + level.bonus)));
+
+  // うらない中の画面へ
+  startCard.classList.add("hidden");
+  $("loadingEmoji").textContent = food.emoji;
+  loadingCard.classList.remove("hidden");
+  window.scrollTo({ top: 0 });
+
+  setTimeout(() => showResult({ name, food, level, msg, item, color, stats, d }), 1900);
+}
+
+/* ===== 結果を表示 ===== */
+function showResult(r){
+  loadingCard.classList.add("hidden");
+
+  const WEEK = ["日","月","火","水","木","金","土"];
+  $("resultDate").textContent = `${r.d.getFullYear()}年${r.d.getMonth() + 1}月${r.d.getDate()}日（${WEEK[r.d.getDay()]}）`;
+  $("resultName").textContent = `${r.name}さんの きょうの運勢`;
+
+  const stamp = $("stamp");
+  stamp.style.color = r.level.color;
+  $("stampText").textContent = r.level.name;
+  // アニメーションをかけ直すためのリセット
+  stamp.style.animation = "none";
+  void stamp.offsetWidth;
+  stamp.style.animation = "";
+
+  $("stars").textContent = r.level.stars;
+  $("fortuneMsg").textContent = r.msg;
+  $("foodComment").textContent = `${r.food.emoji} ${r.food.comment}`;
+  $("luckyItem").textContent = r.item;
+  $("luckyColor").textContent = r.color.name;
+  $("colorDot").style.background = r.color.css;
+
+  // 運勢グラフを組み立てる
+  const bars = $("bars");
+  bars.innerHTML = "";
+  CATEGORIES.forEach((c, i) => {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML =
+      `<div class="bar-head"><span>${c.emoji} ${c.name}</span><span class="bar-val">0</span></div>` +
+      `<div class="bar-track"><div class="bar-fill" style="background:${c.color}"></div></div>`;
+    bars.appendChild(row);
+
+    const fill = row.querySelector(".bar-fill");
+    const val  = row.querySelector(".bar-val");
+    const target = r.stats[i];
+
+    // すこしずつ時間差でのびる
+    setTimeout(() => { fill.style.width = target + "%"; }, 250 + i * 180);
+
+    // 数字カウントアップ
+    let cur = 0;
+    const step = Math.max(1, Math.round(target / 28));
+    const timer = setInterval(() => {
+      cur += step;
+      if (cur >= target){ cur = target; clearInterval(timer); }
+      val.textContent = cur;
+    }, 32);
+  });
+
+  resultCard.classList.remove("hidden");
+  window.scrollTo({ top: 0 });
+
+  // 🎉 お祝い演出（超大吉・大吉はド派手に）
+  celebrate(r.level.name === "超大吉" || r.level.name === "大吉");
+}
+
+/* ===== 紙吹雪 ===== */
+function celebrate(big){
+  const emojis = big
+    ? ["🎉","✨","🌈","⭐","💖","🎊","👑"]
+    : ["🎉","✨","⭐","💖","🍀","🎊"];
+  const count = big ? 85 : 55;
+  for (let i = 0; i < count; i++){
+    const s = document.createElement("span");
+    s.className = "confetti";
+    s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.fontSize = (14 + Math.random() * 18) + "px";
+    s.style.animationDuration = (2.4 + Math.random() * 2.2) + "s";
+    s.style.animationDelay = (Math.random() * 0.9) + "s";
+    document.body.appendChild(s);
+    s.addEventListener("animationend", () => s.remove());
+    setTimeout(() => s.remove(), 6500); // 保険
+  }
+}
+
+/* ===== ボタンの動き ===== */
+$("goBtn").addEventListener("click", divine);
+$("nameInput").addEventListener("keydown", (e) => { if (e.key === "Enter") divine(); });
+$("againBtn").addEventListener("click", () => {
+  resultCard.classList.add("hidden");
+  startCard.classList.remove("hidden");
+  window.scrollTo({ top: 0 });
+});
+</script>
+</body>
+</html>
